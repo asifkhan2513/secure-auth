@@ -14,16 +14,29 @@ interface SendOtpRequestBody {
   email: string;
 }
 
-export const signup = async (req: Request, res: Response) => {
+export const signup = async (req: Request, res: Response): Promise<any> => {
   const { name, email, password } = req.body;
 
   try {
+    // Input validation
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, and password are required",
+      });
+    }
+
+    // Check if user already exists
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
     }
 
+    // Create new user
     const user = await User.create({
       name,
       email,
@@ -31,49 +44,149 @@ export const signup = async (req: Request, res: Response) => {
     });
 
     if (user) {
+      const token = generateToken(user._id.toString());
+
+      // Set secure HTTP-only cookie
+      res.cookie("jwt", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: "/",
+      });
+
+      // Also set a less secure cookie for frontend access if needed
+      res.cookie("token", token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: "/",
+      });
+
       res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id.toString()),
+        success: true,
+        message: "User created successfully",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        },
+        token: token,
       });
     } else {
-      res.status(400).json({ message: "Invalid user data" });
+      res.status(400).json({
+        success: false,
+        message: "Invalid user data",
+      });
     }
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error("Signup error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error during signup",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response): Promise<any> => {
   const { email, password } = req.body;
 
   try {
+    // Input validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
 
-
-    
     // Explicitly select password because select: false was set in model
     const user = await User.findOne({ email }).select("+password");
 
     if (user && (await user.comparePassword(password))) {
-      res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id.toString()),
+      const token = generateToken(user._id.toString());
+
+      // Set secure HTTP-only cookie
+      res.cookie("jwt", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: "/",
+      });
+
+      // Also set a less secure cookie for frontend access if needed
+      res.cookie("token", token, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        path: "/",
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Login successful",
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+        },
+        token: token,
       });
     } else {
-      res.status(401).json({ message: "Invalid email or password" });
+      res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
     }
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error during login",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+export const logout = async (_req: Request, res: Response): Promise<any> => {
+  try {
+    // Clear both cookies
+    res.clearCookie("jwt", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+    });
+
+    res.clearCookie("token", {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error: any) {
+    console.error("Logout error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error during logout",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
   }
 };
 
 export const sendotp = async (
   req: Request<any, any, SendOtpRequestBody>,
   res: Response
-) => {
+): Promise<any> => {
   try {
     const { email } = req.body;
 

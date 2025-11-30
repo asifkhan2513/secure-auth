@@ -22,11 +22,18 @@ declare global {
   }
 }
 
-export const Auth = async (req: Request, res: Response, next: NextFunction) => {
+export const Auth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
   try {
     let token: string | null = null;
 
-    if (req.cookies && req.cookies.token) {
+    // Check for token in cookies (priority order: jwt, token)
+    if (req.cookies && req.cookies.jwt) {
+      token = req.cookies.jwt;
+    } else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
     } else if (req.header("Authorization")) {
       const authHeader = req.header("Authorization");
