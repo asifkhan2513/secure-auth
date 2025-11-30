@@ -1,7 +1,9 @@
 import express from "express";
-import dotenv from "dotenv";
 import authRoutes from "./routes/UserRoutes.js";
 import connectDB from "./config/database.js";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import cors from "cors";
 
 dotenv.config();
 
@@ -11,6 +13,13 @@ const app = express();
 connectDB();
 
 app.use(express.json());
+app.use(cookieParser(process.env.COOKIE_SECRET));
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  })
+);
 
 // Mount the Auth Module
 app.use("/api/v1", authRoutes);

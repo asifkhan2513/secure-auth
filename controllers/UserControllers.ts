@@ -49,6 +49,9 @@ export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
   try {
+
+
+    
     // Explicitly select password because select: false was set in model
     const user = await User.findOne({ email }).select("+password");
 
