@@ -55,6 +55,15 @@ npm run dev
 
 ### Request Examples
 
+
+#### Send OTP
+
+```json
+{
+  "email": "john@example.com"
+}
+```
+
 #### Signup
 
 ```json
@@ -74,13 +83,6 @@ npm run dev
 }
 ```
 
-#### Send OTP
-
-```json
-{
-  "email": "john@example.com"
-}
-```
 
 ## Project Structure
 
